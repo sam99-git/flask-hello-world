@@ -22,7 +22,7 @@ pipeline {
                 ])
             }
         }
-    }
+
 
         stage('Setup Environment') {
             steps {
