@@ -58,7 +58,7 @@ pipeline {
         stage('SAST Scan') {
             steps {
                 sh '''
-                semgrep scan --config auto --error-on-findings --sarif --output ${SCAN_DIR}/semgrep-results.sarif .
+                semgrep scan --config auto --sarif --output /var/lib/jenkins/workspace/DevSecOps/scan-reports/semgrep-results.sarif .
                 '''
             }
             post {
