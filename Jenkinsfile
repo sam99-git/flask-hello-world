@@ -41,7 +41,7 @@ pipeline {
             steps {
                 sh '''
                 # Install Semgrep
-                python -m pip install semgrep
+                python3 -m pip install semgrep
 
                 # Install Gitleaks
                 curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C /usr/local/bin/
@@ -50,7 +50,7 @@ pipeline {
                 curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 
                 # Install Checkov
-                python -m pip install checkov
+                python3 -m pip install checkov
                 '''
             }
         }
