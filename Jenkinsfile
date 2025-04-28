@@ -44,10 +44,10 @@ pipeline {
                 python3 -m pip install semgrep
 
                 # Install Gitleaks
-                curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C /usr/local/bin/
+                curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C /var/lib/jenkins/
 
                 # Install Trivy
-                curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+                curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /var/lib/jenkins/
 
                 # Install Checkov
                 python3 -m pip install checkov
@@ -155,7 +155,7 @@ pipeline {
         stage('Smoke Tests') {
             steps {
                 sh '''
-                curl -sSf http://your-staging-url:30007/health | grep -q '"status":"OK"'
+                curl -sSf http://localhost:30007/health | grep -q '"status":"OK"'
                 '''
             }
         }
