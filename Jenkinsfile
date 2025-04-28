@@ -216,7 +216,6 @@ pipeline {
         always {
             junit allowEmptyResults: true, testResults: '${SCAN_DIR}/*.xml'
             archiveArtifacts artifacts: '${SCAN_DIR}/*.*', allowEmptyArchive: true
-            cleanWs()
         }
         success {
             slackSend(color: 'good', message: "Pipeline SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
