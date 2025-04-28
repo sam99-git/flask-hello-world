@@ -12,4 +12,5 @@ RUN pip install -r requirements.txt
 COPY . .
 
 # Run the application
+USER non-root
 CMD ["python", "app.py"]
