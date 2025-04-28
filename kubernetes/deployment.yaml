@@ -12,7 +12,7 @@ spec:
     spec:
       automountServiceAccountToken: false  # Disable service account token mount
       securityContext:
-        runAsUser: 1001  # High UID to avoid conflicts
+        runAsUser: 10000  # High UID to avoid conflicts (Updated to a higher UID)
         seccompProfile:
           type: RuntimeDefault  # Set seccomp profile
       containers:
