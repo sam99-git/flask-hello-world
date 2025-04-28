@@ -84,7 +84,14 @@ pipeline {
                 archiveArtifacts artifacts: 'zap-report.html'
             }
         }
-    }
+    
+        stage('Test') {
+            steps {
+                sh 'pytest --maxfail=1 --disable-warnings -q' // or your testing framework
+            }
+        }
+    }       
+
 
     post {
         always {
