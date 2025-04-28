@@ -10,6 +10,7 @@ spec:
       labels:
         app: flask-hello-world
     spec:
+      automountServiceAccountToken: false  # Disable service account token mount
       securityContext:
         runAsUser: 1001  # High UID to avoid conflicts
         seccompProfile:
