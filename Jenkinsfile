@@ -12,13 +12,13 @@ pipeline {
                 checkout([
                     $class: 'GitSCM',
                     branches: [[name: 'main']],
-                    extensions: [[
-                        $class: 'CleanBeforeCheckout'
-                    ]],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/sam99-git/flask-hello-world.git',
-                        credentialsId: 'e3816fc2-3a56-4080-9b69-40b884cb86cc'
-                    ]]
+                    extensions: [
+                        [$class: 'CleanBeforeCheckout']
+                    ],
+                    userRemoteConfigs: [
+                        [url: 'https://github.com/sam99-git/flask-hello-world.git',
+                         credentialsId: 'e3816fc2-3a56-4080-9b69-40b884cb86cc']
+                    ]
                 ])
             }
         }
@@ -27,9 +27,9 @@ pipeline {
             steps {
                 sh '''
                 echo "Creating workspace directories..."
-                mkdir -p "${SCAN_DIR}"
+                mkdir -p ${SCAN_DIR}
                 echo "Directory structure:"
-                tree -L 3 "${WORKSPACE}"
+                tree -L 3 ${WORKSPACE}
                 '''
             }
         }
@@ -41,10 +41,10 @@ pipeline {
                 python3 -m pip install semgrep
 
                 # Install Gitleaks
-                curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C /usr/local/bin/
+                curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C /usr/local/bin
 
                 # Install Trivy
-                curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /var/lib/jenkins/
+                curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 
                 # Install Checkov
                 python3 -m pip install checkov
@@ -54,9 +54,15 @@ pipeline {
 
         stage('SAST Scan') {
             steps {
-                sh '''
-                semgrep scan --config auto --sarif --output ${SCAN_DIR}/semgrep-results.sarif .
-                '''
+                script {
+                    // Ensure the SCAN_DIR exists
+                    sh 'mkdir -p ${SCAN_DIR}'
+                    
+                    // Run Semgrep scan
+                    sh '''
+                    semgrep scan --config auto --sarif --output ${SCAN_DIR}/semgrep-results.sarif .
+                    '''
+                }
             }
             post {
                 always {
@@ -67,9 +73,15 @@ pipeline {
 
         stage('Secrets Detection') {
             steps {
-                sh '''
-                gitleaks detect --source=. --report-path=${SCAN_DIR}/gitleaks-report.json --redact
-                '''
+                script {
+                    // Ensure the SCAN_DIR exists
+                    sh 'mkdir -p ${SCAN_DIR}'
+
+                    // Run Gitleaks
+                    sh '''
+                    gitleaks detect --source=. --report-path=${SCAN_DIR}/gitleaks-report.json --redact
+                    '''
+                }
             }
             post {
                 always {
@@ -80,9 +92,15 @@ pipeline {
 
         stage('SCA Dependency Scan') {
             steps {
-                sh '''
-                trivy fs --security-checks vuln,config --format sarif --output ${SCAN_DIR}/trivy-deps-results.sarif --exit-code 0 --severity HIGH,CRITICAL .
-                '''
+                script {
+                    // Ensure the SCAN_DIR exists
+                    sh 'mkdir -p ${SCAN_DIR}'
+
+                    // Run Trivy for SCA dependencies
+                    sh '''
+                    trivy fs --security-checks vuln,config --format sarif --output ${SCAN_DIR}/trivy-deps-results.sarif --exit-code 0 --severity HIGH,CRITICAL .
+                    '''
+                }
             }
             post {
                 always {
@@ -93,9 +111,15 @@ pipeline {
 
         stage('IaC Security Scan') {
             steps {
-                sh '''
-                checkov -d kubernetes/ --output sarif --output-file-path ${SCAN_DIR}/checkov-results.sarif
-                '''
+                script {
+                    // Ensure the SCAN_DIR exists
+                    sh 'mkdir -p ${SCAN_DIR}'
+
+                    // Run Checkov for IaC security scan
+                    sh '''
+                    checkov -d kubernetes/ --output sarif --output-file-path ${SCAN_DIR}/checkov-results.sarif
+                    '''
+                }
             }
             post {
                 always {
