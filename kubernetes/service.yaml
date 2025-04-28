@@ -3,9 +3,6 @@ kind: Service
 metadata:
   name: flask-hello-world
 spec:
-  securityContext:
-    runAsNonRoot: true  
-    allowPrivilegeEscalation: false
   type: NodePort
   selector:
     app: flask-hello-world
