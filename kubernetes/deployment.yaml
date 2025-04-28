@@ -23,6 +23,32 @@ spec:
           volumeMounts:
             - name: my-volume
               mountPath: /my-data
+          securityContext:
+            allowPrivilegeEscalation: false  # Prevent privilege escalation
+            runAsNonRoot: true  # Ensure non-root user
+            readOnlyRootFilesystem: true  # Make filesystem read-only
+            capabilities:
+              drop:
+                - ALL  # Drop all unnecessary capabilities
+          resources:
+            limits:
+              cpu: "500m"  # Set CPU limit
+              memory: "256Mi"  # Set memory limit
+            requests:
+              cpu: "100m"  # Set CPU request
+              memory: "128Mi"  # Set memory request
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 5
       serviceAccountName: flask-hello-world-sa
 ---
 apiVersion: v1
