@@ -1,22 +1,35 @@
 pipeline {
     agent any
 
-    triggers {
-        pollSCM('* * * * *')  // More reliable than githubPush for most setups
-    }
-
     environment {
-        DOCKER_IMAGE = 'sameer2699/flask-hello-world:${env.BUILD_NUMBER}'
-        KUBE_NAMESPACE = 'flask-staging'
         SCAN_DIR = "${WORKSPACE}/scan-reports"
+        DOCKER_IMAGE = "sameer2699/flask-hello-world:${env.BUILD_NUMBER}"
     }
 
     stages {
+        stage('Checkout Code') {
+            steps {
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: 'main']],
+                    extensions: [[
+                        $class: 'CleanBeforeCheckout'
+                    ]],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/sam99-git/flask-hello-world.git',
+                        credentialsId: 'e3816fc2-3a56-4080-9b69-40b884cb86cc'
+                    ]]
+                ])
+            }
+        }
+
         stage('Setup Environment') {
             steps {
                 sh '''
-                mkdir -p ${SCAN_DIR}
-                python -m pip install --upgrade pip
+                echo "Creating workspace directories..."
+                mkdir -p "${SCAN_DIR}"
+                echo "Directory structure:"
+                tree -L 3 "${WORKSPACE}"
                 '''
             }
         }
@@ -155,7 +168,7 @@ pipeline {
         stage('Smoke Tests') {
             steps {
                 sh '''
-                curl -sSf http://localhost:30007/health | grep -q '"status":"OK"'
+                curl -sSf http://your-staging-url:30007/health | grep -q '"status":"OK"'
                 '''
             }
         }
