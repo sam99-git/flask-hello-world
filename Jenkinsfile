@@ -23,7 +23,6 @@ pipeline {
             }
         }
 
-
         stage('Setup Environment') {
             steps {
                 sh '''
@@ -34,8 +33,6 @@ pipeline {
                 '''
             }
         }
-
-        // Removed duplicate 'Checkout Code' stage to avoid conflicts
 
         stage('Install Security Tools') {
             steps {
@@ -58,12 +55,12 @@ pipeline {
         stage('SAST Scan') {
             steps {
                 sh '''
-                semgrep scan --config auto --sarif --output /var/lib/jenkins/workspace/DevSecOps/scan-reports/semgrep-results.sarif .
+                semgrep scan --config auto --sarif --output ${SCAN_DIR}/semgrep-results.sarif .
                 '''
             }
             post {
                 always {
-                    archiveArtifacts artifacts: '${SCAN_DIR}/semgrep-results.sarif'
+                    archiveArtifacts artifacts: '${SCAN_DIR}/semgrep-results.sarif', allowEmptyArchive: true
                 }
             }
         }
@@ -76,7 +73,7 @@ pipeline {
             }
             post {
                 always {
-                    archiveArtifacts artifacts: '${SCAN_DIR}/gitleaks-report.json'
+                    archiveArtifacts artifacts: '${SCAN_DIR}/gitleaks-report.json', allowEmptyArchive: true
                 }
             }
         }
@@ -89,7 +86,7 @@ pipeline {
             }
             post {
                 always {
-                    archiveArtifacts artifacts: '${SCAN_DIR}/trivy-deps-results.sarif'
+                    archiveArtifacts artifacts: '${SCAN_DIR}/trivy-deps-results.sarif', allowEmptyArchive: true
                 }
             }
         }
@@ -102,7 +99,7 @@ pipeline {
             }
             post {
                 always {
-                    archiveArtifacts artifacts: '${SCAN_DIR}/checkov-results.sarif'
+                    archiveArtifacts artifacts: '${SCAN_DIR}/checkov-results.sarif', allowEmptyArchive: true
                 }
             }
         }
@@ -118,7 +115,7 @@ pipeline {
             }
             post {
                 always {
-                    archiveArtifacts artifacts: '${SCAN_DIR}/trivy-image-results.sarif'
+                    archiveArtifacts artifacts: '${SCAN_DIR}/trivy-image-results.sarif', allowEmptyArchive: true
                 }
             }
         }
@@ -147,7 +144,7 @@ pipeline {
             }
             post {
                 always {
-                    archiveArtifacts artifacts: '${SCAN_DIR}/zap-report.*'
+                    archiveArtifacts artifacts: '${SCAN_DIR}/zap-report.*', allowEmptyArchive: true
                 }
             }
         }
