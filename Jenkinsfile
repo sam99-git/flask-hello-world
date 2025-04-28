@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    triggers {
+        githubPush()  // Automatically triggers this pipeline when code is pushed to GitHub
+    }
+
     environment {
         DOCKER_IMAGE = 'sameer2699/flask-hello-world:latest'
     }
@@ -81,19 +85,17 @@ pipeline {
             }
         }
     }
-}
-    
-    
-        post {
-            always {
-                junit 'zap-report.html'
-                archiveArtifacts artifacts: 'zap-report.html', allowEmptyArchive: true
-            }
-            success {
-                echo 'Pipeline completed successfully!'
-            }
-            failure {
-                echo 'Pipeline failed!'
-            }
+
+    post {
+        always {
+            junit 'zap-report.html'
+            archiveArtifacts artifacts: 'zap-report.html', allowEmptyArchive: true
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
         }
     }
+}
