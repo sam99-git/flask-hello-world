@@ -22,6 +22,7 @@ pipeline {
                 ])
             }
         }
+    }
 
         stage('Setup Environment') {
             steps {
@@ -34,21 +35,7 @@ pipeline {
             }
         }
 
-        stage('Checkout Code') {
-            steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: 'main']],
-                    extensions: [[
-                        $class: 'CleanBeforeCheckout',
-                        deleteUntrackedNestedRepositories: true
-                    ]],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/sam99-git/flask-hello-world.git'
-                    ]]
-                ])
-            }
-        }
+        // Removed duplicate 'Checkout Code' stage to avoid conflicts
 
         stage('Install Security Tools') {
             steps {
