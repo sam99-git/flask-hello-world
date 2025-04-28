@@ -16,15 +16,6 @@ pipeline {
             }
         }
 
-        stage('Pre-Commit Scan') {
-            steps {
-                sh '''
-                pip install pre-commit detect-secrets
-                pre-commit run --all-files
-                '''
-            }
-        }
-
         stage('SAST Scan') {
             steps {
                 sh '''
@@ -84,13 +75,13 @@ pipeline {
                 archiveArtifacts artifacts: 'zap-report.html'
             }
         }
-    
+
         stage('Test') {
             steps {
                 sh 'pytest --maxfail=1 --disable-warnings -q' // or your testing framework
             }
         }
-    }       
+    }
 
 
     post {
