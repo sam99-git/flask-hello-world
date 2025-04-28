@@ -140,7 +140,7 @@ pipeline {
                     -v ${SCAN_DIR}:/zap/reports \
                     -t owasp/zap2docker-stable \
                     zap-baseline.py \
-                    -t http://your-staging-url:30007 \
+                    -t http://localhost:30007 \
                     -r zap-report.html \
                     -x zap-report.xml
                 '''
@@ -155,7 +155,7 @@ pipeline {
         stage('Smoke Tests') {
             steps {
                 sh '''
-                curl -sSf http://your-staging-url:30007/health | grep -q '"status":"OK"'
+                curl -sSf http://localhost:30007/health | grep -q '"status":"OK"'
                 '''
             }
         }
