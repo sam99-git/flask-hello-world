@@ -66,6 +66,11 @@ pipeline {
             }
             post {
                 always {
+                    script {
+                        // Ensure the SCAN_DIR exists and contains files
+                        sh 'mkdir -p ${SCAN_DIR}'
+                        sh 'ls -l ${SCAN_DIR}'
+                    }
                     archiveArtifacts artifacts: '${SCAN_DIR}/semgrep-results.sarif', allowEmptyArchive: true
                 }
             }
@@ -85,6 +90,11 @@ pipeline {
             }
             post {
                 always {
+                    script {
+                        // Ensure the SCAN_DIR exists and contains files
+                        sh 'mkdir -p ${SCAN_DIR}'
+                        sh 'ls -l ${SCAN_DIR}'
+                    }
                     archiveArtifacts artifacts: '${SCAN_DIR}/gitleaks-report.json', allowEmptyArchive: true
                 }
             }
@@ -104,6 +114,11 @@ pipeline {
             }
             post {
                 always {
+                    script {
+                        // Ensure the SCAN_DIR exists and contains files
+                        sh 'mkdir -p ${SCAN_DIR}'
+                        sh 'ls -l ${SCAN_DIR}'
+                    }
                     archiveArtifacts artifacts: '${SCAN_DIR}/trivy-deps-results.sarif', allowEmptyArchive: true
                 }
             }
@@ -123,6 +138,11 @@ pipeline {
             }
             post {
                 always {
+                    script {
+                        // Ensure the SCAN_DIR exists and contains files
+                        sh 'mkdir -p ${SCAN_DIR}'
+                        sh 'ls -l ${SCAN_DIR}'
+                    }
                     archiveArtifacts artifacts: '${SCAN_DIR}/checkov-results.sarif', allowEmptyArchive: true
                 }
             }
@@ -139,6 +159,11 @@ pipeline {
             }
             post {
                 always {
+                    script {
+                        // Ensure the SCAN_DIR exists and contains files
+                        sh 'mkdir -p ${SCAN_DIR}'
+                        sh 'ls -l ${SCAN_DIR}'
+                    }
                     archiveArtifacts artifacts: '${SCAN_DIR}/trivy-image-results.sarif', allowEmptyArchive: true
                 }
             }
@@ -168,6 +193,11 @@ pipeline {
             }
             post {
                 always {
+                    script {
+                        // Ensure the SCAN_DIR exists and contains files
+                        sh 'mkdir -p ${SCAN_DIR}'
+                        sh 'ls -l ${SCAN_DIR}'
+                    }
                     archiveArtifacts artifacts: '${SCAN_DIR}/zap-report.*', allowEmptyArchive: true
                 }
             }
