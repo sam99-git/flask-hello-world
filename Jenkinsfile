@@ -12,7 +12,7 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git 'https://github.com/sam99-git/flask-hello-world.git'
+                git branch: 'main', url: 'https://github.com/sam99-git/flask-hello-world.git'
             }
         }
 
