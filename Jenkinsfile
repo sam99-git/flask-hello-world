@@ -4,6 +4,7 @@ pipeline {
     environment {
         SCAN_DIR = "${WORKSPACE}/scan-reports"
         IMAGE_NAME = "sameer2699/flask-hello-world:4"
+        KUBECONFIG_CREDENTIALS = 'kubeconfig-credentials-id' // replace with your actual credentials ID
     }
 
     stages {
@@ -90,16 +91,9 @@ pipeline {
         stage('Deploy to Staging') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    script {
-                        echo "Setting current kube context namespace..."
-                        sh "kubectl config use-context minikube"
-                        sh "kubectl config set-context --current --namespace=default"
-
-                        echo "Deploying app..."
-                        sh "kubectl apply -f k8s/deployment.yaml"
-                        sh "kubectl apply -f k8s/service.yaml"
-
-                        echo "Deployment complete ✅"
+                    withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG')]) {
+                        sh 'kubectl config set-context --current --namespace=default'
+                        sh 'kubectl apply -f k8s/'
                     }
                 }
             }
@@ -126,7 +120,7 @@ pipeline {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     retry(3) {
                         sleep 5
-                        sh 'curl -sSf http://localhost:30007/health | grep -q \'"status":"OK"\'' 
+                        sh 'curl -sSf http://localhost:30007/health | grep -q \'"status":"OK"\''
                     }
                 }
             }
