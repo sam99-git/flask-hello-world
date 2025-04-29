@@ -32,6 +32,11 @@ pipeline {
                 python3 -m pip install checkov
                 curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C ${WORKSPACE}/tools
                 curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ${WORKSPACE}/tools
+
+                # Verify installations
+                semgrep --version || echo "Semgrep installation failed"
+                ${WORKSPACE}/tools/trivy --version || echo "Trivy installation failed"
+                checkov --version || echo "Checkov installation failed"
                 '''
             }
         }
