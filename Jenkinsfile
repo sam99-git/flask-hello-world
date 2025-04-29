@@ -4,7 +4,8 @@ pipeline {
     environment {
         SCAN_DIR = "${WORKSPACE}/scan-reports"
         IMAGE_NAME = "sameer2699/flask-hello-world:${env.BUILD_NUMBER}"
-        KUBECONFIG_CREDENTIALS = 'kubeconfig-credentials-id' // replace with your actual credentials ID
+        KUBECONFIG_CREDENTIALS = 'kubeconfig-credentials-id' // Replace with your actual credentials ID
+        PATH = "${WORKSPACE}/tools:${env.PATH}" // Add tools to the PATH for easy access
     }
 
     stages {
@@ -28,7 +29,7 @@ pipeline {
             steps {
                 sh '''
                 echo "Creating workspace directories..."
-                mkdir -p ${SCAN_DIR}
+                mkdir -p ${SCAN_DIR} ${WORKSPACE}/tools
                 echo "Directory structure:"
                 tree -L 3 ${WORKSPACE}
                 '''
@@ -49,6 +50,18 @@ pipeline {
 
                 # Install Checkov
                 python3 -m pip install checkov
+                '''
+            }
+        }
+
+        stage('Verify Installations') {
+            steps {
+                sh '''
+                # Check versions to verify installations
+                gitleaks --version
+                trivy --version
+                semgrep --version
+                checkov --version
                 '''
             }
         }
