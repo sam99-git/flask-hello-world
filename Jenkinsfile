@@ -3,14 +3,53 @@ pipeline {
 
     environment {
         SCAN_DIR = "${WORKSPACE}/scan-reports"
-        IMAGE_NAME = "sameer2699/flask-hello-world:4"
+        IMAGE_NAME = "sameer2699/flask-hello-world:${env.BUILD_NUMBER}"
         KUBECONFIG_CREDENTIALS = 'kubeconfig-credentials-id' // replace with your actual credentials ID
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: 'main']],
+                    extensions: [
+                        [$class: 'CleanBeforeCheckout']
+                    ],
+                    userRemoteConfigs: [
+                        [url: 'https://github.com/sam99-git/flask-hello-world.git',
+                         credentialsId: 'git-credentials']
+                    ]
+                ])
+            }
+        }
+
+        stage('Setup Environment') {
+            steps {
+                sh '''
+                echo "Creating workspace directories..."
+                mkdir -p ${SCAN_DIR}
+                echo "Directory structure:"
+                tree -L 3 ${WORKSPACE}
+                '''
+            }
+        }
+
+        stage('Install Security Tools') {
+            steps {
+                sh '''
+                # Install Semgrep
+                python3 -m pip install semgrep
+
+                # Install Gitleaks
+                curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C /usr/local/bin
+
+                # Install Trivy
+                curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+                # Install Checkov
+                python3 -m pip install checkov
+                '''
             }
         }
 
@@ -34,13 +73,14 @@ pipeline {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     script {
-                        sh "trufflehog filesystem --directory . --json > ${SCAN_DIR}/secrets.json || true"
+                        sh "mkdir -p ${SCAN_DIR}"
+                        sh "gitleaks detect --source=. --report-path=${SCAN_DIR}/gitleaks-report.json --redact"
                     }
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: "${SCAN_DIR}/secrets.json", allowEmptyArchive: true
+                    archiveArtifacts artifacts: "${SCAN_DIR}/gitleaks-report.json", allowEmptyArchive: true
                 }
             }
         }
@@ -50,13 +90,13 @@ pipeline {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     script {
                         sh "mkdir -p ${SCAN_DIR}"
-                        sh "safety check -r requirements.txt --json > ${SCAN_DIR}/safety-results.json || true"
+                        sh "trivy fs --security-checks vuln,config --format sarif --output ${SCAN_DIR}/trivy-deps-results.sarif --exit-code 0 --severity HIGH,CRITICAL ."
                     }
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: "${SCAN_DIR}/safety-results.json", allowEmptyArchive: true
+                    archiveArtifacts artifacts: "${SCAN_DIR}/trivy-deps-results.sarif", allowEmptyArchive: true
                 }
             }
         }
@@ -66,7 +106,7 @@ pipeline {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     script {
                         sh "mkdir -p ${SCAN_DIR}"
-                        sh "checkov -d . --output sarif --output-file-path ${SCAN_DIR}/checkov-results.sarif || true"
+                        sh "checkov -d kubernetes/ --output sarif --output-file-path ${SCAN_DIR}/checkov-results.sarif"
                     }
                 }
             }
@@ -81,9 +121,14 @@ pipeline {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     script {
-                        sh "docker build -t ${IMAGE_NAME} ."
-                        sh "docker scan ${IMAGE_NAME} || true"
+                        docker.build("${IMAGE_NAME}")
+                        sh "trivy image --format sarif --output ${SCAN_DIR}/trivy-image-results.sarif --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}"
                     }
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: "${SCAN_DIR}/trivy-image-results.sarif", allowEmptyArchive: true
                 }
             }
         }
@@ -93,7 +138,7 @@ pipeline {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG')]) {
                         sh 'kubectl config set-context --current --namespace=default'
-                        sh 'kubectl apply -f k8s/'
+                        sh 'kubectl apply -f kubernetes/'
                     }
                 }
             }
@@ -104,13 +149,21 @@ pipeline {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     script {
                         sh "mkdir -p ${SCAN_DIR}"
-                        sh "docker run --rm -v ${SCAN_DIR}:/zap/reports -t owasp/zap2docker-stable zap-baseline.py -t http://localhost:30007 -r zap-report.html -x zap-report.xml || true"
+                        sh '''
+                        docker run --rm \
+                            -v ${SCAN_DIR}:/zap/reports \
+                            -t owasp/zap2docker-stable \
+                            zap-baseline.py \
+                            -t http://localhost:30007 \
+                            -r zap-report.html \
+                            -x zap-report.xml
+                        '''
                     }
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: "${SCAN_DIR}/*.*", allowEmptyArchive: true
+                    archiveArtifacts artifacts: "${SCAN_DIR}/zap-report.*", allowEmptyArchive: true
                 }
             }
         }
@@ -129,8 +182,17 @@ pipeline {
 
     post {
         always {
-            junit '**/test-results/*.xml'
+            junit allowEmptyResults: true, testResults: "${SCAN_DIR}/*.xml"
             archiveArtifacts artifacts: "${SCAN_DIR}/*.*", allowEmptyArchive: true
+        }
+        success {
+            slackSend(color: 'good', message: "Pipeline SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+        }
+        failure {
+            slackSend(color: 'danger', message: "Pipeline FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+        }
+        unstable {
+            slackSend(color: 'warning', message: "Pipeline UNSTABLE: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
         }
     }
 }
