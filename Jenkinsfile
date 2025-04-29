@@ -17,7 +17,7 @@ pipeline {
                     ],
                     userRemoteConfigs: [
                         [url: 'https://github.com/sam99-git/flask-hello-world.git',
-                         credentialsId: 'e3816fc2-3a56-4080-9b69-40b884cb86cc']
+                         credentialsId: 'git-credentials']
                     ]
                 ])
             }
