@@ -38,9 +38,7 @@ pipeline {
 
         stage('SAST Scan') {
             steps {
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    sh "semgrep scan --config auto --sarif --output ${SCAN_DIR}/semgrep-results.sarif ."
-                }
+                sh "semgrep scan --config auto --sarif --output ${SCAN_DIR}/semgrep-results.sarif ."
             }
             post {
                 always {
@@ -51,9 +49,7 @@ pipeline {
 
         stage('Secrets Detection') {
             steps {
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    sh "gitleaks detect --source=. --report-path=${SCAN_DIR}/gitleaks-report.json --redact"
-                }
+                sh "gitleaks detect --source=. --report-path=${SCAN_DIR}/gitleaks-report.json --redact"
             }
             post {
                 always {
@@ -64,9 +60,7 @@ pipeline {
 
         stage('SCA Dependency Scan') {
             steps {
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    sh "trivy fs --scanners vuln,misconfig --format sarif --output ${SCAN_DIR}/trivy-deps-results.sarif --exit-code 0 --severity HIGH,CRITICAL ."
-                }
+                sh "trivy fs --scanners vuln,misconfig --format sarif --output ${SCAN_DIR}/trivy-deps-results.sarif --exit-code 0 --severity HIGH,CRITICAL ."
             }
             post {
                 always {
@@ -77,9 +71,7 @@ pipeline {
 
         stage('IaC Security Scan') {
             steps {
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    sh "checkov -d kubernetes/ --output sarif --output-file-path ${SCAN_DIR}/checkov-results.sarif"
-                }
+                sh "checkov -d kubernetes/ --output sarif --output-file-path ${SCAN_DIR}/checkov-results.sarif"
             }
             post {
                 always {
@@ -90,12 +82,10 @@ pipeline {
 
         stage('Docker Build & Scan') {
             steps {
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    sh '''
-                    docker build -t ${IMAGE_NAME} .
-                    trivy image --format sarif --output ${SCAN_DIR}/trivy-image-results.sarif --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}
-                    '''
-                }
+                sh '''
+                docker build -t ${IMAGE_NAME} .
+                trivy image --format sarif --output ${SCAN_DIR}/trivy-image-results.sarif --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}
+                '''
             }
             post {
                 always {
@@ -106,13 +96,11 @@ pipeline {
 
         stage('Deploy to Staging') {
             steps {
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG')]) {
-                        sh '''
-                        kubectl apply -f kubernetes/namespace.yaml
-                        kubectl apply -f kubernetes/ --validate=false
-                        '''
-                    }
+                withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG')]) {
+                    sh '''
+                    kubectl apply -f kubernetes/namespace.yaml
+                    kubectl apply -f kubernetes/ --validate=false
+                    '''
                 }
             }
         }

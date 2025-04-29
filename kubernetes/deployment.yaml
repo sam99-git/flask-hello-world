@@ -5,6 +5,9 @@ metadata:
   namespace: flask-hello-world-namespace  # Custom namespace
 spec:
   replicas: 1
+  selector:  # Added selector
+    matchLabels:
+      app: flask-hello-world
   template:
     metadata:
       labels:
@@ -12,7 +15,7 @@ spec:
     spec:
       automountServiceAccountToken: false  # Disable service account token mount
       securityContext:
-        runAsUser: 10000  # High UID to avoid conflicts (Updated to a higher UID)
+        runAsUser: 10000  # High UID to avoid conflicts
         seccompProfile:
           type: RuntimeDefault  # Set seccomp profile
       containers:
@@ -51,6 +54,9 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
       serviceAccountName: flask-hello-world-sa
+      volumes:  # Added volumes section
+        - name: my-volume
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
