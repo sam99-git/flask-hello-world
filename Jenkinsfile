@@ -28,29 +28,15 @@ pipeline {
         stage('Install Security Tools') {
             steps {
                 sh '''
-                # Use bash explicitly
-                bash -c '
-                # Install Semgrep
-                python3 -m pip install --target=${WORKSPACE}/tools semgrep
-                echo "alias semgrep=\'python3 ${WORKSPACE}/tools/semgrep\'" >> ~/.bashrc
-
-                # Install Checkov
-                python3 -m pip install --target=${WORKSPACE}/tools checkov
-                echo "alias checkov=\'python3 ${WORKSPACE}/tools/checkov\'" >> ~/.bashrc
-
-                # Install Gitleaks
+                python3 -m pip install semgrep
+                python3 -m pip install checkov
                 curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C ${WORKSPACE}/tools
-
-                # Install Trivy
                 curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ${WORKSPACE}/tools
 
                 # Verify installations
-                . ~/.bashrc
                 semgrep --version || echo "Semgrep installation failed"
-                ${WORKSPACE}/tools/gitleaks version || echo "Gitleaks installation failed"
                 ${WORKSPACE}/tools/trivy --version || echo "Trivy installation failed"
                 checkov --version || echo "Checkov installation failed"
-                '
                 '''
             }
         }
