@@ -1,7 +1,7 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Namespace
 metadata:
-  name: flask-hello-world
+  name: flask-hello-world-namespace
   namespace: flask-hello-world-namespace  # Custom namespace
 spec:
   replicas: 1

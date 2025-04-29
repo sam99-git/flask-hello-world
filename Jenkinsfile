@@ -109,7 +109,7 @@ pipeline {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG')]) {
                         sh '''
-                        kubectl cluster-info || echo "Kubernetes cluster is not reachable"
+                        kubectl apply -f kubernetes/namespace.yaml
                         kubectl apply -f kubernetes/ --validate=false
                         '''
                     }
