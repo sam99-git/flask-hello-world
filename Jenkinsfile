@@ -54,18 +54,6 @@ pipeline {
             }
         }
 
-        stage('Verify Installations') {
-            steps {
-                sh '''
-                # Check versions to verify installations
-                gitleaks --version
-                trivy --version
-                semgrep --version
-                checkov --version
-                '''
-            }
-        }
-
         stage('SAST Scan') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
