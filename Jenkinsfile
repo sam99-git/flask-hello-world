@@ -91,15 +91,15 @@ pipeline {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     script {
-                        sh "echo "Setting current kube context namespace...""
+                        sh "echo Setting current kube context namespace..."
                         sh "kubectl config use-context minikube"
                         sh "kubectl config set-context --current --namespace=default"
 
-                        sh "echo "Deploying app...""
+                        sh "echo Deploying app..."
                         sh "kubectl apply -f k8s/deployment.yaml"
                         sh "kubectl apply -f k8s/service.yaml"
 
-                        sh "echo "Deployment complete ✅""
+                        sh "echo Deployment complete ✅"
                     }
                 }
             }
