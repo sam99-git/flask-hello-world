@@ -88,19 +88,19 @@ pipeline {
         }
 
         stage('Deploy to Staging') {
-            catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                steps {
-                    sh '''
-                        echo "Setting current kube context namespace..."
-                        kubectl config use-context minikube
-                        kubectl config set-context --current --namespace=default
+            steps {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                    script {
+                        sh "echo "Setting current kube context namespace...""
+                        sh "kubectl config use-context minikube"
+                        sh "kubectl config set-context --current --namespace=default"
 
-                        echo "Deploying app..."
-                        kubectl apply -f k8s/deployment.yaml
-                        kubectl apply -f k8s/service.yaml
+                        sh "echo "Deploying app...""
+                        sh "kubectl apply -f k8s/deployment.yaml"
+                        sh "kubectl apply -f k8s/service.yaml"
 
-                        echo "Deployment complete ✅"
-                    '''
+                        sh "echo "Deployment complete ✅""
+                    }
                 }
             }
         }
