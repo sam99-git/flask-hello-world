@@ -29,9 +29,9 @@ pipeline {
             steps {
                 sh '''
                 python3 -m pip install semgrep
+                python3 -m pip install checkov
                 curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C ${WORKSPACE}/tools
                 curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ${WORKSPACE}/tools
-                python3 -m pip install checkov
                 '''
             }
         }
@@ -92,8 +92,7 @@ pipeline {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     sh '''
-                    docker buildx create --use || echo "Buildx already configured"
-                    docker buildx build --platform linux/amd64 -t ${IMAGE_NAME} .
+                    docker build -t ${IMAGE_NAME} .
                     trivy image --format sarif --output ${SCAN_DIR}/trivy-image-results.sarif --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}
                     '''
                 }
