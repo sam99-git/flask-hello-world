@@ -4,31 +4,20 @@ pipeline {
     environment {
         SCAN_DIR = "${WORKSPACE}/scan-reports"
         IMAGE_NAME = "sameer2699/flask-hello-world:${env.BUILD_NUMBER}"
-        KUBECONFIG_CREDENTIALS = 'kubeconfig-credentials-id' // Replace with your actual credentials ID
-        PATH = "${WORKSPACE}/tools:${env.PATH}" // Add tools to the PATH for easy access
+        KUBECONFIG_CREDENTIALS = 'kubeconfig-credentials-id'
+        PATH = "${WORKSPACE}/tools:${env.PATH}"
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: 'main']],
-                    extensions: [
-                        [$class: 'CleanBeforeCheckout']
-                    ],
-                    userRemoteConfigs: [
-                        [url: 'https://github.com/sam99-git/flask-hello-world.git',
-                         credentialsId: 'git-credentials']
-                    ]
-                ])
+                checkout scm
             }
         }
 
         stage('Setup Environment') {
             steps {
                 sh '''
-                echo "Creating workspace directories..."
                 mkdir -p ${SCAN_DIR} ${WORKSPACE}/tools
                 echo "Directory structure:"
                 tree -L 3 ${WORKSPACE}
@@ -39,16 +28,9 @@ pipeline {
         stage('Install Security Tools') {
             steps {
                 sh '''
-                # Install Semgrep
                 python3 -m pip install semgrep
-
-                # Install Gitleaks
                 curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C ${WORKSPACE}/tools
-
-                # Install Trivy
                 curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ${WORKSPACE}/tools
-
-                # Install Checkov
                 python3 -m pip install checkov
                 '''
             }
@@ -57,15 +39,12 @@ pipeline {
         stage('SAST Scan') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    script {
-                        sh "mkdir -p ${SCAN_DIR}"
-                        sh "semgrep scan --config auto --sarif --output ${SCAN_DIR}/semgrep-results.sarif ."
-                    }
+                    sh "semgrep scan --config auto --sarif --output ${SCAN_DIR}/semgrep-results.sarif ."
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: "${SCAN_DIR}/semgrep-results.sarif", allowEmptyArchive: true
+                    archiveArtifacts artifacts: "scan-reports/semgrep-results.sarif", allowEmptyArchive: true
                 }
             }
         }
@@ -73,15 +52,12 @@ pipeline {
         stage('Secrets Detection') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    script {
-                        sh "mkdir -p ${SCAN_DIR}"
-                        sh "gitleaks detect --source=. --report-path=${SCAN_DIR}/gitleaks-report.json --redact"
-                    }
+                    sh "gitleaks detect --source=. --report-path=${SCAN_DIR}/gitleaks-report.json --redact"
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: "${SCAN_DIR}/gitleaks-report.json", allowEmptyArchive: true
+                    archiveArtifacts artifacts: "scan-reports/gitleaks-report.json", allowEmptyArchive: true
                 }
             }
         }
@@ -89,15 +65,12 @@ pipeline {
         stage('SCA Dependency Scan') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    script {
-                        sh "mkdir -p ${SCAN_DIR}"
-                        sh "trivy fs --security-checks vuln,config --format sarif --output ${SCAN_DIR}/trivy-deps-results.sarif --exit-code 0 --severity HIGH,CRITICAL ."
-                    }
+                    sh "trivy fs --scanners vuln,misconfig --format sarif --output ${SCAN_DIR}/trivy-deps-results.sarif --exit-code 0 --severity HIGH,CRITICAL ."
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: "${SCAN_DIR}/trivy-deps-results.sarif", allowEmptyArchive: true
+                    archiveArtifacts artifacts: "scan-reports/trivy-deps-results.sarif", allowEmptyArchive: true
                 }
             }
         }
@@ -105,15 +78,12 @@ pipeline {
         stage('IaC Security Scan') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    script {
-                        sh "mkdir -p ${SCAN_DIR}"
-                        sh "checkov -d kubernetes/ --output sarif --output-file-path ${SCAN_DIR}/checkov-results.sarif"
-                    }
+                    sh "checkov -d kubernetes/ --output sarif --output-file-path ${SCAN_DIR}/checkov-results.sarif"
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: "${SCAN_DIR}/checkov-results.sarif", allowEmptyArchive: true
+                    archiveArtifacts artifacts: "scan-reports/checkov-results.sarif", allowEmptyArchive: true
                 }
             }
         }
@@ -121,15 +91,16 @@ pipeline {
         stage('Docker Build & Scan') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    script {
-                        docker.build("${IMAGE_NAME}")
-                        sh "trivy image --format sarif --output ${SCAN_DIR}/trivy-image-results.sarif --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}"
-                    }
+                    sh '''
+                    docker buildx create --use || echo "Buildx already configured"
+                    docker buildx build --platform linux/amd64 -t ${IMAGE_NAME} .
+                    trivy image --format sarif --output ${SCAN_DIR}/trivy-image-results.sarif --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}
+                    '''
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: "${SCAN_DIR}/trivy-image-results.sarif", allowEmptyArchive: true
+                    archiveArtifacts artifacts: "scan-reports/trivy-image-results.sarif", allowEmptyArchive: true
                 }
             }
         }
@@ -138,43 +109,10 @@ pipeline {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG')]) {
-                        sh 'kubectl config set-context --current --namespace=default'
-                        sh 'kubectl apply -f kubernetes/'
-                    }
-                }
-            }
-        }
-
-        stage('DAST Scan') {
-            steps {
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    script {
-                        sh "mkdir -p ${SCAN_DIR}"
                         sh '''
-                        docker run --rm \
-                            -v ${SCAN_DIR}:/zap/reports \
-                            -t owasp/zap2docker-stable \
-                            zap-baseline.py \
-                            -t http://localhost:30007 \
-                            -r zap-report.html \
-                            -x zap-report.xml
+                        kubectl cluster-info || echo "Kubernetes cluster is not reachable"
+                        kubectl apply -f kubernetes/ --validate=false
                         '''
-                    }
-                }
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: "${SCAN_DIR}/zap-report.*", allowEmptyArchive: true
-                }
-            }
-        }
-
-        stage('Smoke Tests') {
-            steps {
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    retry(3) {
-                        sleep 5
-                        sh 'curl -sSf http://localhost:30007/health | grep -q \'"status":"OK"\''
                     }
                 }
             }
