@@ -3,6 +3,8 @@ pipeline {
 
     environment {
         SCAN_DIR = "${WORKSPACE}/scan-reports"
+        TOOLS_DIR = "${WORKSPACE}/tools"
+        PATH = "${WORKSPACE}/tools:$PATH"
         DOCKER_IMAGE = "sameer2699/flask-hello-world:${env.BUILD_NUMBER}"
     }
 
@@ -27,7 +29,7 @@ pipeline {
             steps {
                 sh '''
                 echo "Creating workspace directories..."
-                mkdir -p ${SCAN_DIR}
+                mkdir -p ${SCAN_DIR} ${TOOLS_DIR}
                 echo "Directory structure:"
                 tree -L 3 ${WORKSPACE}
                 '''
@@ -37,17 +39,21 @@ pipeline {
         stage('Install Security Tools') {
             steps {
                 sh '''
+                # Create tools directory
+                mkdir -p ${TOOLS_DIR}
+                export PATH=${TOOLS_DIR}:$PATH
+
                 # Install Semgrep
-                python3 -m pip install semgrep
+                python3 -m pip install --user semgrep
 
                 # Install Gitleaks
-                curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C /usr/local/bin
+                curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C ${TOOLS_DIR}
 
                 # Install Trivy
-                curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+                curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ${TOOLS_DIR}
 
                 # Install Checkov
-                python3 -m pip install checkov
+                python3 -m pip install --user checkov
                 '''
             }
         }
@@ -55,10 +61,7 @@ pipeline {
         stage('SAST Scan') {
             steps {
                 script {
-                    // Ensure the SCAN_DIR exists
                     sh 'mkdir -p ${SCAN_DIR}'
-                    
-                    // Run Semgrep scan
                     sh '''
                     semgrep scan --config auto --sarif --output ${SCAN_DIR}/semgrep-results.sarif .
                     '''
@@ -66,11 +69,7 @@ pipeline {
             }
             post {
                 always {
-                    script {
-                        // Ensure the SCAN_DIR exists and contains files
-                        sh 'mkdir -p ${SCAN_DIR}'
-                        sh 'ls -l ${SCAN_DIR}'
-                    }
+                    sh 'ls -l ${SCAN_DIR}'
                     archiveArtifacts artifacts: '${SCAN_DIR}/semgrep-results.sarif', allowEmptyArchive: true
                 }
             }
@@ -79,10 +78,7 @@ pipeline {
         stage('Secrets Detection') {
             steps {
                 script {
-                    // Ensure the SCAN_DIR exists
                     sh 'mkdir -p ${SCAN_DIR}'
-
-                    // Run Gitleaks
                     sh '''
                     gitleaks detect --source=. --report-path=${SCAN_DIR}/gitleaks-report.json --redact
                     '''
@@ -90,11 +86,7 @@ pipeline {
             }
             post {
                 always {
-                    script {
-                        // Ensure the SCAN_DIR exists and contains files
-                        sh 'mkdir -p ${SCAN_DIR}'
-                        sh 'ls -l ${SCAN_DIR}'
-                    }
+                    sh 'ls -l ${SCAN_DIR}'
                     archiveArtifacts artifacts: '${SCAN_DIR}/gitleaks-report.json', allowEmptyArchive: true
                 }
             }
@@ -103,10 +95,7 @@ pipeline {
         stage('SCA Dependency Scan') {
             steps {
                 script {
-                    // Ensure the SCAN_DIR exists
                     sh 'mkdir -p ${SCAN_DIR}'
-
-                    // Run Trivy for SCA dependencies
                     sh '''
                     trivy fs --security-checks vuln,config --format sarif --output ${SCAN_DIR}/trivy-deps-results.sarif --exit-code 0 --severity HIGH,CRITICAL .
                     '''
@@ -114,11 +103,7 @@ pipeline {
             }
             post {
                 always {
-                    script {
-                        // Ensure the SCAN_DIR exists and contains files
-                        sh 'mkdir -p ${SCAN_DIR}'
-                        sh 'ls -l ${SCAN_DIR}'
-                    }
+                    sh 'ls -l ${SCAN_DIR}'
                     archiveArtifacts artifacts: '${SCAN_DIR}/trivy-deps-results.sarif', allowEmptyArchive: true
                 }
             }
@@ -127,10 +112,7 @@ pipeline {
         stage('IaC Security Scan') {
             steps {
                 script {
-                    // Ensure the SCAN_DIR exists
                     sh 'mkdir -p ${SCAN_DIR}'
-
-                    // Run Checkov for IaC security scan
                     sh '''
                     checkov -d kubernetes/ --output sarif --output-file-path ${SCAN_DIR}/checkov-results.sarif
                     '''
@@ -138,11 +120,7 @@ pipeline {
             }
             post {
                 always {
-                    script {
-                        // Ensure the SCAN_DIR exists and contains files
-                        sh 'mkdir -p ${SCAN_DIR}'
-                        sh 'ls -l ${SCAN_DIR}'
-                    }
+                    sh 'ls -l ${SCAN_DIR}'
                     archiveArtifacts artifacts: '${SCAN_DIR}/checkov-results.sarif', allowEmptyArchive: true
                 }
             }
@@ -159,11 +137,7 @@ pipeline {
             }
             post {
                 always {
-                    script {
-                        // Ensure the SCAN_DIR exists and contains files
-                        sh 'mkdir -p ${SCAN_DIR}'
-                        sh 'ls -l ${SCAN_DIR}'
-                    }
+                    sh 'ls -l ${SCAN_DIR}'
                     archiveArtifacts artifacts: '${SCAN_DIR}/trivy-image-results.sarif', allowEmptyArchive: true
                 }
             }
@@ -193,11 +167,7 @@ pipeline {
             }
             post {
                 always {
-                    script {
-                        // Ensure the SCAN_DIR exists and contains files
-                        sh 'mkdir -p ${SCAN_DIR}'
-                        sh 'ls -l ${SCAN_DIR}'
-                    }
+                    sh 'ls -l ${SCAN_DIR}'
                     archiveArtifacts artifacts: '${SCAN_DIR}/zap-report.*', allowEmptyArchive: true
                 }
             }
