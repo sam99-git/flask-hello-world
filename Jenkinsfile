@@ -109,16 +109,24 @@ pipeline {
                 }
             }
         }
-
         stage('Deploy to Staging') {
             steps {
-                sh '''
-                kubectl apply --validate=false -f kubernetes/namespace.yaml
-                kubectl apply --validate=false -f kubernetes/deployment.yaml
-                kubectl apply --validate=false -f kubernetes/service.yaml
-                '''
+                withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG_FILE')]) {
+                    sh '''
+                    export KUBECONFIG=$KUBECONFIG_FILE
+
+                    # Just to verify context
+                    kubectl config current-context
+                    kubectl get nodes
+
+                    kubectl apply --validate=false -f kubernetes/namespace.yaml
+                    kubectl apply --validate=false -f kubernetes/deployment.yaml
+                    kubectl apply --validate=false -f kubernetes/service.yaml
+                    '''
+                }
             }
         }
+
     }
 
     post {
