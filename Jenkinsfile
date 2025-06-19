@@ -118,7 +118,7 @@ pipeline {
                     # Just to verify context
                     kubectl config current-context
                     kubectl get nodes
-
+                    kubectl apply --validate=false -f kubernetes/serviceaccount.yaml
                     kubectl apply --validate=false -f kubernetes/namespace.yaml
                     kubectl apply --validate=false -f kubernetes/deployment.yaml
                     kubectl apply --validate=false -f kubernetes/service.yaml
