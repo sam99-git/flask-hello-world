@@ -119,7 +119,6 @@ pipeline {
                     archiveArtifacts artifacts: "scan-reports/trivy-image-results.sarif", allowEmptyArchive: true
                 }
             }
-        }
         stage('Deploy to Staging') {
             steps {
                 withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG_FILE')]) {
