@@ -99,26 +99,25 @@ pipeline {
 
         stage('Docker Build & Scan') {
             steps {
-                withCredentials([string(credentialsId: 'docker-credentials', variable: 'DOCKER_PASSWORD')]) {
-                    sh '''
-                        docker build -t ${IMAGE_NAME} .
-                        ${WORKSPACE}/tools/trivy image --format sarif --output ${SCAN_DIR}/trivy-image-results.sarif --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}
-                        
-                        # Secure docker login
-                        echo "$DOCKER_PASSWORD" | docker login -u sameer2699 --password-stdin
-                        
-                        # Push the image with proper tag
-                        docker push ${IMAGE_NAME}
-                    '''
-                }
+				withCredentials([string(credentialsId: 'docker-credentials', variable: 'DOCKER_PASSWORD')]) {
+					sh '''
+						docker build -t ${IMAGE_NAME} .
+						${WORKSPACE}/tools/trivy image --format sarif --output ${SCAN_DIR}/trivy-image-results.sarif --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}
+						
+						# Secure docker login
+						echo "$DOCKER_PASSWORD" | docker login -u sameer2699 --password-stdin
+						
+						# Push the image with proper tag
+						docker push ${IMAGE_NAME}
+					'''
+				}
             }
-        }
-
             post {
                 always {
                     archiveArtifacts artifacts: "scan-reports/trivy-image-results.sarif", allowEmptyArchive: true
                 }
             }
+        }
         stage('Deploy to Staging') {
             steps {
                 withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG_FILE')]) {
