@@ -99,13 +99,13 @@ pipeline {
 
         stage('Docker Build & Scan') {
             steps {
-				withCredentials([string(credentialsId: 'docker-credentials', variable: 'DOCKER_PASSWORD')]) {
+				withCredentials([string(credentialsId: 'docker-credentials',usernameVariable: 'DOCKER_USERNAME' variable: 'DOCKER_PASSWORD')]) {
 					sh '''
 						docker build -t ${IMAGE_NAME} .
 						${WORKSPACE}/tools/trivy image --format sarif --output ${SCAN_DIR}/trivy-image-results.sarif --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}
 						
 						# Secure docker login
-						echo "$DOCKER_PASSWORD" | docker login -u sameer2699 --password-stdin
+						echo "$DOCKER_PASSWORD" | docker login -u DOCKER_USERNAME --password-stdin
 						
 						# Push the image with proper tag
 						docker push ${IMAGE_NAME}
