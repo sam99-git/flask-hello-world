@@ -1,5 +1,5 @@
 # Use official Python image
-FROM python:3.9-slim
+FROM python:3.9-slim-bullseye
 
 # Set working directory
 WORKDIR /app
@@ -12,5 +12,5 @@ RUN pip install -r requirements.txt
 COPY . .
 
 # Run the application
-USER non-root
+USER non-root  
 CMD ["python", "app.py"]

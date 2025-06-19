@@ -18,7 +18,7 @@ pipeline {
 
         stage('SAST Scan') {
             steps {
-                sh '''
+                sh '''  
                 pip install semgrep
                 semgrep scan --config auto .
                 '''
@@ -44,7 +44,7 @@ pipeline {
         stage('IaC Security Scan') {
             steps {
                 sh '''
-                pip install checkov
+                pip install checkov 
                 checkov -d kubernetes/
                 '''
             }

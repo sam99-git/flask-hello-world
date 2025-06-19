@@ -5,7 +5,7 @@ pipeline {
         SCAN_DIR = "${WORKSPACE}/scan-reports"
         IMAGE_NAME = "sameer2699/flask-hello-world:${env.BUILD_NUMBER}"
         KUBECONFIG_CREDENTIALS = 'kubeconfig-credentials-id'
-        PATH = "${WORKSPACE}/tools:${env.PATH}"
+        PATH = "$HOME/.local/bin:${WORKSPACE}/tools:${env.PATH}"
     }
 
     stages {
@@ -28,22 +28,30 @@ pipeline {
         stage('Install Security Tools') {
             steps {
                 sh '''
-                python3 -m pip install semgrep
-                python3 -m pip install checkov
+                # Install Semgrep and Checkov to local bin
+                python3 -m pip install --user semgrep checkov
+
+                # Install Gitleaks
                 curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C ${WORKSPACE}/tools
+
+                # Install Trivy
                 curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ${WORKSPACE}/tools
 
                 # Verify installations
-                semgrep --version || echo "Semgrep installation failed"
-                ${WORKSPACE}/tools/trivy --version || echo "Trivy installation failed"
-                checkov --version || echo "Checkov installation failed"
+                echo "Verifying tools..."
+                semgrep --version || { echo "❌ Semgrep installation failed"; exit 1; }
+                checkov --version || { echo "❌ Checkov installation failed"; exit 1; }
+                ${WORKSPACE}/tools/trivy --version || { echo "❌ Trivy installation failed"; exit 1; }
+                ${WORKSPACE}/tools/gitleaks version || { echo "❌ Gitleaks installation failed"; exit 1; }
                 '''
             }
         }
 
         stage('SAST Scan') {
             steps {
-                sh "semgrep scan --config auto --sarif --output ${SCAN_DIR}/semgrep-results.sarif ."
+                sh '''
+                semgrep scan --config auto --sarif --output ${SCAN_DIR}/semgrep-results.sarif .
+                '''
             }
             post {
                 always {
@@ -54,7 +62,9 @@ pipeline {
 
         stage('Secrets Detection') {
             steps {
-                sh "gitleaks detect --source=. --report-path=${SCAN_DIR}/gitleaks-report.json --redact"
+                sh '''
+                ${WORKSPACE}/tools/gitleaks detect --source=. --report-path=${SCAN_DIR}/gitleaks-report.json --redact
+                '''
             }
             post {
                 always {
@@ -65,7 +75,9 @@ pipeline {
 
         stage('SCA Dependency Scan') {
             steps {
-                sh "trivy fs --scanners vuln,misconfig --format sarif --output ${SCAN_DIR}/trivy-deps-results.sarif --exit-code 0 --severity HIGH,CRITICAL ."
+                sh '''
+                ${WORKSPACE}/tools/trivy fs --scanners vuln,misconfig --format sarif --output ${SCAN_DIR}/trivy-deps-results.sarif --exit-code 0 --severity HIGH,CRITICAL .
+                '''
             }
             post {
                 always {
@@ -76,7 +88,9 @@ pipeline {
 
         stage('IaC Security Scan') {
             steps {
-                sh "checkov -d kubernetes/ --output sarif --output-file-path ${SCAN_DIR}/checkov-results.sarif"
+                sh '''
+                checkov -d kubernetes/ --output sarif --output-file-path ${SCAN_DIR}/checkov-results.sarif
+                '''
             }
             post {
                 always {
@@ -89,7 +103,7 @@ pipeline {
             steps {
                 sh '''
                 docker build -t ${IMAGE_NAME} .
-                trivy image --format sarif --output ${SCAN_DIR}/trivy-image-results.sarif --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}
+                ${WORKSPACE}/tools/trivy image --format sarif --output ${SCAN_DIR}/trivy-image-results.sarif --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}
                 '''
             }
             post {
@@ -117,13 +131,13 @@ pipeline {
             archiveArtifacts artifacts: "${SCAN_DIR}/*.*", allowEmptyArchive: true
         }
         success {
-            slackSend(color: 'good', message: "Pipeline SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+            slackSend(color: 'good', message: "✅ Pipeline SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
         }
         failure {
-            slackSend(color: 'danger', message: "Pipeline FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+            slackSend(color: 'danger', message: "❌ Pipeline FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
         }
         unstable {
-            slackSend(color: 'warning', message: "Pipeline UNSTABLE: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+            slackSend(color: 'warning', message: "⚠️ Pipeline UNSTABLE: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
         }
     }
 }
