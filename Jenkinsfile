@@ -127,14 +127,5 @@ pipeline {
             // Archive all scan reports
             archiveArtifacts artifacts: 'scan-reports/**/*', allowEmptyArchive: true
         }
-        success {
-            slackSend(color: 'good', message: "✅ Pipeline SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
-        }
-        failure {
-            slackSend(color: 'danger', message: "❌ Pipeline FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
-        }
-        unstable {
-            slackSend(color: 'warning', message: "⚠️ Pipeline UNSTABLE: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
-        }
     }
 }
