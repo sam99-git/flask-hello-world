@@ -112,7 +112,6 @@ pipeline {
 
         stage('Deploy to Staging') {
             steps {
-                withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG')]) {
                     sh '''
                     kubectl apply -f kubernetes/namespace.yaml
                     kubectl apply -f kubernetes/ --validate=false
