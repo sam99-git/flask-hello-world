@@ -6,6 +6,7 @@ pipeline {
         IMAGE_NAME = "sameer2699/flask-hello-world:${env.BUILD_NUMBER}"
         KUBECONFIG_CREDENTIALS = 'kubeconfig-credentials-id'
         PATH = "${WORKSPACE}/tools:$HOME/.local/bin:${env.PATH}"
+        DOCKER_PASSWORD = 'docker-credentials'
     }
 
     stages {
@@ -101,6 +102,9 @@ pipeline {
                 sh '''
                 docker build -t ${IMAGE_NAME} .
                 ${WORKSPACE}/tools/trivy image --format sarif --output ${SCAN_DIR}/trivy-image-results.sarif --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}
+                docker login -u sameer2699 -p $DOCKER_PASSWORD
+                docker push sameer2699/flask-hello-world:${BUILD_NUMBER}
+
                 '''
             }
             post {
