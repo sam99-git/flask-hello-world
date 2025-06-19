@@ -123,8 +123,12 @@ pipeline {
 
     post {
         always {
-            junit allowEmptyResults: true, testResults: "${SCAN_DIR}/*.xml"
-            archiveArtifacts artifacts: "${SCAN_DIR}/*.*", allowEmptyArchive: true
+            
+            // Archive all scan reports
+            archiveArtifacts artifacts: 'scan-reports/**/*', allowEmptyArchive: true
+
+            // Optional: Only if you generate test results like junit-*.xml
+            junit allowEmptyResults: true, testResults: '**/junit-*.xml'
         }
         success {
             slackSend(color: 'good', message: "✅ Pipeline SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
