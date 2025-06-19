@@ -113,8 +113,9 @@ pipeline {
         stage('Deploy to Staging') {
             steps {
                 sh '''
-                kubectl apply -f kubernetes/namespace.yaml
-                kubectl apply -f kubernetes/ --validate=false
+                kubectl apply --validate=false -f kubernetes/namespace.yaml
+                kubectl apply --validate=false -f kubernetes/deployment.yaml
+                kubectl apply --validate=false -f kubernetes/service.yaml
                 '''
             }
         }
