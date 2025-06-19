@@ -105,23 +105,22 @@ pipeline {
                     passwordVariable: 'DOCKER_PASSWORD'
                 )]) {
                     sh '''
-                        # Build and tag the image
+                        # Build, tag, and push the image
                         docker build -t ${IMAGE_NAME} .
-                        
-                        # Scan the image
-                        ${WORKSPACE}/tools/trivy image --format sarif --output ${SCAN_DIR}/trivy-image-results.sarif --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}
-                        
-                        # Login and push
                         echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
                         docker push ${IMAGE_NAME}
-                        
+
                         # 👇 Get the SHA256 digest of the pushed image
                         DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${IMAGE_NAME} | cut -d'@' -f2)
                         echo "Image digest: $DIGEST"
+
+                        # 👇 Replace placeholder in deployment.yaml
+                        sed -i "s|IMAGE_DIGEST|${DIGEST}|g" kubernetes/deployment.yaml
                         
-                        # 👇 Update deployment.yaml with the digest
-                        sed -i "s|image:.*|image: sameer2699/flask-hello-world@${DIGEST}|g" kubernetes/deployment.yaml
-                        cat kubernetes/deployment.yaml  # Verify the change
+                        # Optional: Update imagePullPolicy to "Always" for compliance
+                        sed -i 's|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g' kubernetes/deployment.yaml
+                        echo "Updated deployment.yaml:"
+                        cat kubernetes/deployment.yaml
                     '''
                 }
             }

@@ -22,7 +22,7 @@ spec:
        - name: regcred    
       containers:
         - name: flask-hello-world
-          image: flask-hello-world@sha256:b7eba23d021c7053804eb076d1779dfb98ef4f25062abc29088ccca204c9c691  # Use digest instead of tag
+          image: flask-hello-world@IMAGE_DIGEST  # Use digest instead of tag
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000
